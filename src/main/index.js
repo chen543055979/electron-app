@@ -1,6 +1,6 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { app, shell, BrowserWindow, ipcMain, dialog, screen } from 'electron'
+import { join, path } from 'path'
+import { electronApp, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { writeFileSync } from 'fs'
 
@@ -26,6 +26,44 @@ function createWindow() {
     mainWindow.show() // 显示窗口
   })
 
+  mainWindow.loadFile('src/renderer/renderer1/index.html')
+
+  // 获取所有屏幕信息
+  const displays = screen.getAllDisplays()
+  console.log('displays', displays)
+
+  // 判断是否副窗口
+  let secondDisplay = displays.find((display) => {
+    return display.bounds.x !== 0 || display.bounds.y !== 0
+  })
+
+  // 如果是副窗口
+  if (secondDisplay) {
+    // 创建浏览器窗口
+    const secondWindow = new BrowserWindow({
+      x: secondDisplay.bounds.x,
+      y: secondDisplay.bounds.y,
+      width: secondDisplay.bounds.width,
+      height: secondDisplay.bounds.height,
+      show: false, // 初始时不显示窗口，等到窗口准备好后再显示
+      autoHideMenuBar: true, // 自动隐藏菜单栏
+      ...(process.platform === 'linux' ? { icon } : {}), // 如果是 Linux 系统，设置窗口图标
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.js'), // 指定预加载脚本的路径
+        sandbox: false, // 禁用沙箱模式
+        contextIsolation: true, // 上下文隔离
+        nodeIntegration: false // 渲染进程不能使用nodejs
+      }
+    })
+
+    // 当窗口准备好显示时触发该事件
+    secondWindow.on('ready-to-show', () => {
+      secondWindow.show() // 显示窗口
+    })
+
+    mainWindow.loadFile('src/renderer/renderer2/index.html')
+  }
+
   // 处理窗口内打开新链接的情况
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url) // 使用系统默认浏览器打开链接
@@ -35,11 +73,12 @@ function createWindow() {
   // 根据开发或生产环境加载不同的页面
   // HMR（热模块替换）用于开发环境，基于 electron - vite cli
   // 开发环境加载远程 URL，生产环境加载本地 HTML 文件
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  }
+  // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  //   mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  // } else {
+  //   mainWindow.loadFile(join(__dirname, '../renderer1/index.html'))
+  //   secondWindow.loadFile(join(__dirname, '../renderer2/index.html'))
+  // }
 }
 
 // 当 Electron 完成初始化并准备好创建浏览器窗口时调用此方法

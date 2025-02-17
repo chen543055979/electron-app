@@ -12,9 +12,18 @@ export default defineConfig({
   renderer: {
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src')
+        '@renderer1': resolve('src/renderer/renderer1/src'),
+        '@renderer2': resolve('src/renderer/renderer2/src')
       }
     },
-    plugins: [vue()]
+    plugins: [vue()],
+    build: {
+      rollupOptions: {
+        input: {
+          'renderer1/index.html': resolve('src/renderer/renderer1/index.html'),
+          'renderer2/index.html': resolve('src/renderer/renderer2/index.html')
+        }
+      }
+    }
   }
 })
